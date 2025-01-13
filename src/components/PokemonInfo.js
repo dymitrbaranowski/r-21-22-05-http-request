@@ -1,6 +1,6 @@
 import { Component } from 'react';
 // import PokemonDataView from './PokemonDataView';
-// import PokemonErrorView from './PokemonErrorView';
+import PokemonErrorView from './PokemonErrorView';
 // import PokemonPendingView from './PokemonPendingView';
 // import pokemonAPI from '../services/pokemon-api';
 
@@ -14,7 +14,9 @@ import { Component } from 'react';
 export default class PokemonInfo extends Component {
   state = {
     pokemon: null,
-    loading: false,
+
+    error: null,
+    status: 'idle',
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -22,28 +24,50 @@ export default class PokemonInfo extends Component {
     const nextName = this.props.pokemonName;
 
     if (prevName !== nextName) {
-      console.log('Изменилось имя покемона');
-
-      this.setState({ loading: true });
+      this.setState({ status: 'pending' });
       setTimeout(() => {
         fetch(`https://pokeapi.co/api/v2/pokemon/${nextName}`)
-          .then(res => res.json())
-          .then(pokemon => this.setState({ pokemon }))
-          .finally(() => this.setState({ loading: false }));
+          .then(res => {
+            if (res.ok) {
+              return res.json();
+            }
+            return Promise.reject(
+              new Error(`Нет покемона с именем ${nextName}`)
+            );
+          })
+
+          .then(pokemon => this.setState({ pokemon, status: 'resolved' }))
+          .catch(error => this.setState({ error, status: 'rejected' }));
       }, 1000);
     }
   }
 
   render() {
-    const { pokemon, loading } = this.state;
-    const { pokemonName } = this.props;
+    const { pokemon, error, status } = this.state;
 
-    return (
-      <div>
-        {loading && <div>Загружаем...</div>}
-        {!pokemonName && <div>Введите имя покемона!</div>}
-        {pokemon && <div>{pokemon.name}</div>}
-      </div>
-    );
+    if (status === 'idle') {
+      return <div>Введите имя покемона!</div>;
+    }
+
+    if (status === 'pending') {
+      return <div>Загружаем...</div>;
+    }
+
+    if (status === 'rejected') {
+      return <PokemonErrorView message={error.message} />;
+    }
+
+    if (status === 'resolved') {
+      return (
+        <div>
+          <p>{pokemon.name}</p>
+          <img
+            src={pokemon.sprites.other['official-artwork'].front_default}
+            width="240"
+            alt={pokemon.name}
+          />
+        </div>
+      );
+    }
   }
 }
