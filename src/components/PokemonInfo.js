@@ -12,19 +12,37 @@ import { Component } from 'react';
 // };
 
 export default class PokemonInfo extends Component {
+  state = {
+    pokemon: null,
+    loading: false,
+  };
+
   componentDidUpdate(prevProps, prevState) {
-    if (prevProps.pokemonName !== this.props.pokemonName) {
+    const prevName = prevProps.pokemonName;
+    const nextName = this.props.pokemonName;
+
+    if (prevName !== nextName) {
       console.log('Изменилось имя покемона');
-      console.log('prevProps.pokemonName: ', prevProps.pokemonName);
-      console.log('this.props.pokemonName: ', this.props.pokemonName);
+
+      this.setState({ loading: true });
+      setTimeout(() => {
+        fetch(`https://pokeapi.co/api/v2/pokemon/${nextName}`)
+          .then(res => res.json())
+          .then(pokemon => this.setState({ pokemon }))
+          .finally(() => this.setState({ loading: false }));
+      }, 1000);
     }
   }
 
   render() {
+    const { pokemon, loading } = this.state;
+    const { pokemonName } = this.props;
+
     return (
       <div>
-        <h1>PokemonInfo</h1>
-        <p>{this.props.pokemonName}</p>
+        {loading && <div>Загружаем...</div>}
+        {!pokemonName && <div>Введите имя покемона!</div>}
+        {pokemon && <div>{pokemon.name}</div>}
       </div>
     );
   }
